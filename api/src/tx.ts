@@ -92,26 +92,22 @@ export function validateAddr(addr: string): boolean {
 /**
  * Possible return codes and messages:
  *   - code: 0,   msg: 'ok'
- *   - code: 10,  msg: 'missing address'
- *   - code: 11,  msg: 'invalid address'
- *   - code: 20,  msg: 'no available utxo'
+ *   - code: 30,  msg: 'invalid address'
+ *   - code: 40,  msg: 'no available utxo'
  *   - code: 90,  msg: 'unknown exception'
  */
-export async function faucet(addr?: string): Promise<{
+export async function faucet(addr: string): Promise<{
     code: number;
     msg: string;
     data: null | { txId: string; rawHex: string; };
 }> {
-    if (!addr) {
-        return {code: 10, msg: 'missing address', data: null};
-    }
     if (!validateAddr(addr)) {
-        return {code: 11, msg: 'invalid address', data: null};
+        return {code: 30, msg: 'invalid address', data: null};
     }
     const bullet = await redis.lpop(`${keyPrefix}bullets`);
     if (!bullet) {
         log(`[faucet] no available bullets to faucet`);
-        return {code: 20, msg: 'no available utxo', data: null};
+        return {code: 40, msg: 'no available utxo', data: null};
     }
     try {
         const psbt = new ExtPsbt({network}).spendUTXO(JSON.parse(bullet)).change(addr, feeRate).seal();

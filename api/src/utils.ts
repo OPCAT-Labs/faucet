@@ -26,3 +26,20 @@ export async function sleep(seconds: number): Promise<void> {
 export function log(...args: any[]): void {
     console.log(`[${dayjs().format("YYYY-MM-DD HH:mm:ss")}]`, ...args);
 }
+
+export async function verifyTurnstileToken(token: string): Promise<boolean> {
+    try {
+        const resp = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+            method: "POST",
+            headers: {"Content-Type": "application/x-www-form-urlencoded"},
+            body: new URLSearchParams({
+                secret: process.env.TURNSTILE_SECRET || '',
+                response: token,
+            })
+        });
+        const data = await resp.json();
+        return !!data.success;
+    } catch {
+        return false;
+    }
+}
