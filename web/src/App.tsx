@@ -7,6 +7,7 @@ const App: React.FC = () => {
     const [response, setResponse] = useState<string | null>(null);
     const SITE_KEY = "0x4AAAAAABjKzbhgZyN_qPcs";
     const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const [turnstileKey, setTurnstileKey] = useState(0);
 
     const handleAddr = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -35,6 +36,8 @@ const App: React.FC = () => {
         } catch {
             setResponse("Request failed");
         }
+        setCaptchaToken(null);
+        setTurnstileKey(k => k + 1);
         setLoading(false);
     };
 
@@ -49,8 +52,8 @@ const App: React.FC = () => {
                 style={{width: "80%", marginTop: 20, marginBottom: 20, padding: 8}}
             />
             <br/>
-            <Turnstile sitekey={SITE_KEY} onVerify={handleCaptcha} style={{margin: "20px auto"}}/>
-            <button onClick={handleClick} disabled={loading}>
+            <Turnstile key={turnstileKey} sitekey={SITE_KEY} onVerify={handleCaptcha} style={{margin: "20px auto"}}/>
+            <button onClick={handleClick} disabled={loading || !captchaToken || !addr}>
                 {loading ? "Processing..." : "Claim"}
             </button>
             {response && <div style={{marginTop: 30}}>{response}</div>}
