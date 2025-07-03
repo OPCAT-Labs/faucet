@@ -13,6 +13,9 @@ export const bulletsPerRound = parseInt(process.env.BULLETS_PER_ROUND || '2');
 export const bulletsThreshold = parseInt(process.env.BULLETS_THRESHOLD || '1');
 export const daemonSleepSeconds = parseInt(process.env.DAEMON_SLEEP_SECONDS || '10');
 
+export const limitPerAddrPerDay = parseInt(process.env.LIMIT_PER_ADDR_PER_DAY || '5');
+export const limitPerIpPerDay = parseInt(process.env.LIMIT_PER_IP_PER_DAY || '10');
+
 export const keyPrefix = "opcatlayer-faucet:";
 export const redis = new Redis({
     host: process.env.REDIS_HOST,
@@ -42,4 +45,8 @@ export async function verifyTurnstileToken(token: string): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+export function shouldCheckIp(ip?: string | null): boolean {
+    return !!ip && !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip.trim())
 }
