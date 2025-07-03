@@ -114,14 +114,14 @@ export async function faucet(addr?: string | null, clientIp?: string | null): Pr
     }
     // addr rate limit check
     const limitAddrKey = `${keyPrefix}limit_${addr}`;
-    if (await checkLimit(limitAddrKey, limitPerAddrPerDay)) {
+    if (await reachLimit(limitAddrKey, limitPerAddrPerDay)) {
         log(`[faucet] limit exceeded for address ${addr}`);
         return {code: 30, msg: 'limit exceeded for this address', data: null};
     }
     // ip rate limit check
     const limitIpKey = `${keyPrefix}limit_${clientIp}`;
     const needCheckIp = shouldCheckIp(clientIp);
-    if (needCheckIp && (await checkLimit(limitIpKey, limitPerIpPerDay))) {
+    if (needCheckIp && (await reachLimit(limitIpKey, limitPerIpPerDay))) {
         log(`[faucet] limit exceeded for ip ${clientIp}`);
         return {code: 31, msg: 'limit exceeded for this ip', data: null};
     }
@@ -150,7 +150,7 @@ export async function faucet(addr?: string | null, clientIp?: string | null): Pr
     }
 }
 
-async function checkLimit(key: string, limit: number): Promise<boolean> {
+async function reachLimit(key: string, limit: number): Promise<boolean> {
     const count = await redis.get(key);
     return !!count && parseInt(count) >= limit;
 }
