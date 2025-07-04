@@ -44,6 +44,11 @@ const App: React.FC = () => {
     return (
         <div style={{maxWidth: 800, margin: "100px auto", textAlign: "center"}}>
             <h1>OpcatLayer Testnet</h1>
+            <br/>
+            <ul style={{textAlign: "left", display: "inline-block", margin: 0, paddingLeft: 20}}>
+                <li>Each IP is allowed up to <b>10</b> claims every 24 hours.</li>
+                <li>Each address is allowed up to <b>5</b> claims every 24 hours.</li>
+            </ul>
             <input
                 type="text"
                 value={addr}
