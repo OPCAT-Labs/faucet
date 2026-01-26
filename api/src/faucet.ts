@@ -20,19 +20,16 @@ export async function broadcast(rawTxHex: string): Promise<string> {
     return provider.broadcast(rawTxHex);
 }
 
-export async function queryPoolUtxo(): Promise<UTXO> {
+export async function queryPoolUtxos(): Promise<UTXO | UTXO[]> {
     const key = `${keyPrefix}pool`;
-    const utxo = await redis.get(key);
-    if (!utxo) {
-        const address = await signer.getAddress();
-        const utxos = await provider.getUtxos(address);
-        if (utxos.length !== 1) {
-            throw new Error(`unexpected pool utxos, ${JSON.stringify(utxos)}`);
-        }
-        await redis.set(key, JSON.stringify(utxos[0]));
-        return utxos[0];
+    const cached = await redis.get(key);
+    if (cached) {
+        return JSON.parse(cached);
     }
-    return JSON.parse(utxo);
+    const address = await signer.getAddress();
+    const utxos = await provider.getUtxos(address);
+    await redis.set(key, JSON.stringify(utxos));
+    return utxos;
 }
 
 export async function updatePoolUtxo(utxo: UTXO | null): Promise<void> {
@@ -49,12 +46,12 @@ export async function refillBullets() {
     if (bulletsCount > bulletsThreshold) {
         return;
     }
-    const poolUtxo = await queryPoolUtxo();
-    log(`[refill] there are ${bulletsCount} bullets in queue, start refilling, pool utxo: ${JSON.stringify(poolUtxo)}`);
+    const poolUtxos = await queryPoolUtxos();
+    log(`[refill] there are ${bulletsCount} bullets in queue, start refilling, pool utxos: ${JSON.stringify(poolUtxos)}`);
     const address = await signer.getAddress();
     // build tx
     const psbt = new ExtPsbt({network})
-        .spendUTXO(poolUtxo)
+        .spendUTXO(poolUtxos)
         .addOutputs(
             Array.from({length: bulletsPerRound}).map(() => ({
                 address: address,
@@ -80,7 +77,7 @@ export async function refillBullets() {
             redis.rpush(`${keyPrefix}bullets`, JSON.stringify(psbt.getUtxo(i)))
         ),
     ]);
-    log(`[refill] injected ${bulletsPerRound} bullets, pool utxo updated to ${JSON.stringify(psbt.getUtxo(bulletsPerRound))}`);
+    log(`[refill] injected ${bulletsPerRound} bullets, pool utxos updated to ${JSON.stringify(psbt.getUtxo(bulletsPerRound))}`);
 }
 
 export function validateAddr(addr?: string | null): boolean {
