@@ -8,7 +8,7 @@ export const network = (process.env.NETWORK || 'opcat-testnet') as SupportedNetw
 export const provider = new MempoolProvider(network);
 
 export const bulletSatoshis = parseInt(process.env.BULLET_SATOSHIS || '10000000');
-export const feeRate = parseInt(process.env.FEE_RATE || '1');
+export const feeRate = parseFloat(process.env.FEE_RATE || '1');
 export const bulletsPerRound = parseInt(process.env.BULLETS_PER_ROUND || '2');
 export const bulletsThreshold = parseInt(process.env.BULLETS_THRESHOLD || '1');
 export const daemonSleepSeconds = parseInt(process.env.DAEMON_SLEEP_SECONDS || '10');
