@@ -7,8 +7,8 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@opcat-labs/opcat": "^2.1.0",
-    "@opcat-labs/scrypt-ts-opcat": "^2.1.0",
+    "@opcat-labs/opcat": "^4.0.0-beta-a60fffb-20260301",
+    "@opcat-labs/scrypt-ts-opcat": "^4.0.0-beta-a60fffb-20260301",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
     "dotenv": "^17.0.0",
