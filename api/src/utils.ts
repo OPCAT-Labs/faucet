@@ -1,11 +1,11 @@
 import {PrivateKey} from "@opcat-labs/opcat";
-import {DefaultSigner, MempoolProvider, SupportedNetwork} from "@opcat-labs/scrypt-ts-opcat";
+import {DefaultSigner, OpenApiProvider, SupportedNetwork} from "@opcat-labs/scrypt-ts-opcat";
 import dayjs from "dayjs";
 import Redis from "ioredis";
 
 export const signer = new DefaultSigner(PrivateKey.fromWIF(process.env.WIF || ""));
 export const network = (process.env.NETWORK || 'opcat-testnet') as SupportedNetwork;
-export const provider = new MempoolProvider(network);
+export const provider = new OpenApiProvider(network);
 
 export const bulletSatoshis = parseInt(process.env.BULLET_SATOSHIS || '10000000');
 export const feeRate = parseFloat(process.env.FEE_RATE || '1');
