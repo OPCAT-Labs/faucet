@@ -1,17 +1,19 @@
 import React, {useState} from "react";
 import Turnstile from "react-turnstile";
 
+const EXPLORER = "https://testnet.opcatlabs.io";
+
 const App: React.FC = () => {
     const [addr, setAddr] = useState("");
     const [loading, setLoading] = useState(false);
-    const [response, setResponse] = useState<string | null>(null);
+    const [txId, setTxId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
     const SITE_KEY = "0x4AAAAAABjKzbhgZyN_qPcs";
     const [captchaToken, setCaptchaToken] = useState<string | null>(null);
     const [turnstileKey, setTurnstileKey] = useState(0);
 
     const handleAddr = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        setAddr(val);
+        setAddr(e.target.value);
     };
 
     const handleCaptcha = (token: string | null) => {
@@ -20,11 +22,12 @@ const App: React.FC = () => {
 
     const handleClick = async () => {
         if (!captchaToken) {
-            setResponse("Please complete the CAPTCHA verification first.");
+            setError("Please complete the CAPTCHA verification first.");
             return;
         }
         setLoading(true);
-        setResponse(null);
+        setTxId(null);
+        setError(null);
         try {
             const res = await fetch("https://faucet-api.opcatlabs.io/claim", {
                 method: "POST",
@@ -32,9 +35,13 @@ const App: React.FC = () => {
                 body: JSON.stringify({addr, captchaToken}),
             });
             const data = await res.json();
-            setResponse(data?.code === 0 ? `[OK] ${data.data.txId}` : `[ERROR] ${data.msg} (${data.code})`);
+            if (data?.code === 0) {
+                setTxId(data.data.txId);
+            } else {
+                setError(`${data.msg} (code: ${data.code})`);
+            }
         } catch {
-            setResponse("Request failed");
+            setError("Request failed. Please try again.");
         }
         setCaptchaToken(null);
         setTurnstileKey(k => k + 1);
@@ -62,7 +69,29 @@ const App: React.FC = () => {
             <button onClick={handleClick} disabled={loading || !captchaToken || !addr}>
                 {loading ? "Processing..." : "Claim"}
             </button>
-            {response && <div style={{marginTop: 30}}>{response}</div>}
+
+            {txId && (
+                <div style={{marginTop: 30, padding: "16px 20px", background: "#0d2218", border: "1px solid #16a34a", borderRadius: 8}}>
+                    <div style={{color: "#4ade80", fontWeight: 700, marginBottom: 8}}>✅ Coins sent!</div>
+                    <div style={{fontFamily: "monospace", fontSize: 13, color: "#86efac", wordBreak: "break-all", marginBottom: 10}}>
+                        {txId}
+                    </div>
+                    <a
+                        href={`${EXPLORER}/tx/${txId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{color: "#f97316", fontWeight: 600, fontSize: 14, textDecoration: "none"}}
+                    >
+                        View on Explorer →
+                    </a>
+                </div>
+            )}
+
+            {error && (
+                <div style={{marginTop: 30, padding: "12px 16px", background: "#1a0a0a", border: "1px solid #dc2626", borderRadius: 8, color: "#f87171"}}>
+                    ❌ {error}
+                </div>
+            )}
         </div>
     );
 };
