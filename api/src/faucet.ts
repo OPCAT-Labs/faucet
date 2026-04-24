@@ -100,8 +100,16 @@ export function validateAddr(addr?: string | null): boolean {
  *   - code: 31,  msg: 'limit exceeded for this ip'
  *   - code: 40,  msg: 'no available utxo'
  *   - code: 90,  msg: 'unknown exception'
+ *
+ * `skipLimits` bypasses both the per-address and per-ip rate limits and does
+ * not record usage. Reserved for internal automation authenticated via a dev
+ * token — never expose this parameter to untrusted input.
  */
-export async function faucet(addr?: string | null, clientIp?: string | null): Promise<{
+export async function faucet(
+    addr?: string | null,
+    clientIp?: string | null,
+    skipLimits: boolean = false,
+): Promise<{
     code: number;
     msg: string;
     data: null | { txId: string; rawHex: string; };
@@ -109,18 +117,18 @@ export async function faucet(addr?: string | null, clientIp?: string | null): Pr
     if (!validateAddr(addr)) {
         return {code: 20, msg: 'invalid address', data: null};
     }
-    // addr rate limit check
     const limitAddrKey = `${keyPrefix}limit_${addr}`;
-    if (await reachLimit(limitAddrKey, limitPerAddrPerDay)) {
-        log(`[faucet] limit exceeded for address ${addr}`);
-        return {code: 30, msg: 'limit exceeded for this address', data: null};
-    }
-    // ip rate limit check
     const limitIpKey = `${keyPrefix}limit_${clientIp}`;
     const needCheckIp = shouldCheckIp(clientIp);
-    if (needCheckIp && (await reachLimit(limitIpKey, limitPerIpPerDay))) {
-        log(`[faucet] limit exceeded for ip ${clientIp}`);
-        return {code: 31, msg: 'limit exceeded for this ip', data: null};
+    if (!skipLimits) {
+        if (await reachLimit(limitAddrKey, limitPerAddrPerDay)) {
+            log(`[faucet] limit exceeded for address ${addr}`);
+            return {code: 30, msg: 'limit exceeded for this address', data: null};
+        }
+        if (needCheckIp && (await reachLimit(limitIpKey, limitPerIpPerDay))) {
+            log(`[faucet] limit exceeded for ip ${clientIp}`);
+            return {code: 31, msg: 'limit exceeded for this ip', data: null};
+        }
     }
 
     const bullet = await redis.lpop(`${keyPrefix}bullets`);
@@ -134,12 +142,14 @@ export async function faucet(addr?: string | null, clientIp?: string | null): Pr
         psbt.combine(ExtPsbt.fromHex(signedPsbtHex)).finalizeAllInputs();
         const rawHex = psbt.extractTransaction().toHex();
         const txId = await broadcast(rawHex);
-        log(`[faucet] tx broadcasted ${txId} -> ${addr} `);
-        // after a successful request, record addr/ip usage in parallel
-        await Promise.all([
-            recordLimit(limitAddrKey),
-            needCheckIp ? recordLimit(limitIpKey) : Promise.resolve()
-        ]);
+        log(`[faucet] tx broadcasted ${txId} -> ${addr}${skipLimits ? ' (dev)' : ''}`);
+        if (!skipLimits) {
+            // after a successful request, record addr/ip usage in parallel
+            await Promise.all([
+                recordLimit(limitAddrKey),
+                needCheckIp ? recordLimit(limitIpKey) : Promise.resolve()
+            ]);
+        }
         return {code: 0, msg: 'ok', data: {txId, rawHex}};
     } catch (e: any) {
         log(`[faucet] unknown exception, ${e?.message || e}`);

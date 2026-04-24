@@ -2,6 +2,7 @@ import {PrivateKey} from "@opcat-labs/opcat";
 import {DefaultSigner, OpenApiProvider, SupportedNetwork} from "@opcat-labs/scrypt-ts-opcat";
 import dayjs from "dayjs";
 import Redis from "ioredis";
+import type {Request} from "express";
 
 export const signer = new DefaultSigner(PrivateKey.fromWIF(process.env.WIF || ""));
 export const network = (process.env.NETWORK || 'opcat-testnet') as SupportedNetwork;
@@ -49,4 +50,33 @@ export async function verifyTurnstileToken(token: string): Promise<boolean> {
 
 export function shouldCheckIp(ip?: string | null): boolean {
     return !!ip && !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip.trim())
+}
+
+/**
+ * Resolve the real client IP.
+ *
+ * We do not use `req.ip` with `trust proxy: true` — that chain is attacker-
+ * controlled and lets anyone impersonate localhost by setting
+ * `X-Forwarded-For: 127.0.0.1`.
+ *
+ * In production the service sits behind Cloudflare, which injects
+ * `CF-Connecting-IP` with the true client IP. Fall back to the TCP peer for
+ * local dev where no CF header is present.
+ */
+export function getClientIp(req: Request): string | undefined {
+    const cfIp = req.headers['cf-connecting-ip'];
+    if (typeof cfIp === 'string' && cfIp.trim()) {
+        return cfIp.trim();
+    }
+    return req.socket.remoteAddress ?? undefined;
+}
+
+/**
+ * Dev tokens are stored in the Redis SET `opcatlayer-faucet:dev-keys`.
+ * Admins rotate via:
+ *   redis-cli SADD opcatlayer-faucet:dev-keys <random-hex>
+ *   redis-cli SREM opcatlayer-faucet:dev-keys <old-token>
+ */
+export async function isDevToken(token: string): Promise<boolean> {
+    return (await redis.sismember(`${keyPrefix}dev-keys`, token)) === 1;
 }
